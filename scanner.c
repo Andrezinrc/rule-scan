@@ -1,6 +1,7 @@
 #include "scanner.h"
 #include <dirent.h>
 #include <sys/stat.h>
+#include <ctype.h>
 
 uint8_t eicar_signature[EICAR_SIZE] = {
     0x58,0x35,0x4F,0x21,0x50,0x25,0x40,0x41,
@@ -193,6 +194,67 @@ void run_rules_test(const char* filename) {
     }
 }
 
+int should_ignore_dir(const char* path) {
+    const char* ignore_dirs[] = {
+        ".git", ".github", ".vscode", ".idea", ".settings",
+        ".gradle", ".mvn",
+
+        "node_modules", "vendor", "__pycache__",
+        "env", "venv", ".venv",
+        "target",
+
+        "dist", "build", "out", "bin", "obj",
+
+        "logs", "tmp", "cache", ".cache",
+        NULL
+    };
+
+    for (int i=0; ignore_dirs[i] != NULL; i++) {
+        if (strstr(path, ignore_dirs[i]) != NULL) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+int should_scan_file(const char* path) {
+
+    const char* ext = strrchr(path, '.');
+    if (!ext)
+        return 0;
+    ext++; // Pula o ponto
+
+    char lower_ext[16];
+    int j=0;
+    while (*ext && j<15) {
+        lower_ext[j++] = tolower(*ext++);
+    }
+    lower_ext[j]='\0';
+
+    const char* allowed[] = {
+        "exe", "dll", "scr", "msi", "com", "pif",
+        "elf", "bin", "so",
+        "ps1", "bat", "cmd", "vbs", "js",
+        "doc", "docm", "xls", "xlsm", "ppt", "pptm",
+        "apk", "jar",
+        "pdf", "swf",
+        "zip", "rar", "7z",
+        "vbe",
+        "jse",
+        "wsf",
+        NULL
+    };
+
+    for (int i=0; allowed[i] != NULL; i++) {
+        if (strcmp(lower_ext, allowed[i])==0) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 void scan_directory(const char* path) {
     DIR* d = opendir(path);
     if(!d) {
@@ -213,14 +275,25 @@ void scan_directory(const char* path) {
         if(stat(fullpath, &st) == -1) {
             continue;
         }
-        if(S_ISDIR(st.st_mode)){
-            //printf(GREEN "Entrando em: %s\n" RESET, fullpath);
+        if (S_ISDIR(st.st_mode)) {
+
+            if (should_ignore_dir(fullpath)) {
+                continue;
+            }
+
             scan_directory(fullpath);
+
         } else {
-            //printf("Testando arquivo: %s\n", fullpath);
+
+            if (!should_scan_file(fullpath)) {
+                continue;
+            }
+
             int result = scan_file_rules(fullpath);
-            if(result>0){
-                printf(RED "[!] Ameacas detactadas: %d\n\n" RESET, result);
+
+            if (result>0) {
+                printf(RED "[!] Ameacas detectadas: %d | Arquivo: %s\n\n" 
+                       RESET, result, fullpath);
             }
         }
     }

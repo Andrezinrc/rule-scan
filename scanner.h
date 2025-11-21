@@ -35,6 +35,8 @@ int scan_file_rules(const char* filename);
 void create_test_file();
 void run_rules_test(const char* filename);
 void show_scan_summary(void);
+int should_ignore_dir(const char* path);
+int should_scan_file(const char* path);
 void scan_directory(const char* path);
 
 #endif
