@@ -1,4 +1,4 @@
-# signature_scan
+# adr_scan
 
 O objetivo é apenas aprendizado sobre antivírus, assinaturas e análise de bytes em C.
 
