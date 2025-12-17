@@ -3,6 +3,8 @@
 #include <sys/stat.h>
 #include <ctype.h>
 
+// Assinatura EICAR padrão (teste de antivírus)
+// String: X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
 uint8_t eicar_signature[EICAR_SIZE] = {
     0x58,0x35,0x4F,0x21,0x50,0x25,0x40,0x41,
     0x50,0x5B,0x34,0x5C,0x50,0x5A,0x58,0x35,
@@ -18,6 +20,7 @@ uint8_t eicar_signature[EICAR_SIZE] = {
 signature_t signatures[MAX_SIGNATURES];
 int signature_count = 0;
 
+// Carrega regras no formato: nome=hex hex hex
 int load_signatures(const char* rules_file) {
     FILE* file = fopen(rules_file, "r");
     if (!file) {
@@ -76,6 +79,7 @@ int scan_file_rules(const char* filename) {
 
     const size_t CHUNK = 4096;
 
+    // Buffer com overlap para detectar padrões que cruzam chunks
     uint8_t buffer[CHUNK + MAX_PATTERN_LEN];
     size_t overlap = MAX_PATTERN_LEN - 1;
     size_t preserved=0;
@@ -90,6 +94,7 @@ int scan_file_rules(const char* filename) {
 
         buffer_size = preserved + bytes_read;
 
+        // Detecção EICAR
         if (!eicar_detected && buffer_size >= EICAR_SIZE) {
             for (size_t i=0;i<=buffer_size - EICAR_SIZE;i++) {
                 if (memcmp(&buffer[i], eicar_signature, EICAR_SIZE) == 0) {
@@ -104,6 +109,7 @@ int scan_file_rules(const char* filename) {
             }
         }
 
+        // Detecção de regras customizadas
         for (int sig_idx = 0; sig_idx < signature_count; sig_idx++) {
             if (rule_detected[sig_idx])
                 continue;
@@ -124,6 +130,7 @@ int scan_file_rules(const char* filename) {
             }
         }
         
+		 // Preserva final do buffer para próximo chunk (overlap)
         if (buffer_size >= overlap) {
             preserved = overlap;
             memcpy(buffer, buffer + (buffer_size - overlap), overlap);
@@ -138,6 +145,7 @@ int scan_file_rules(const char* filename) {
     return threats_found;
 }
 
+// Cria arquivo de teste EICAR
 void create_test_file() {
     FILE* file = fopen("eicar_test.txt", "wb");
     if (!file) {
@@ -191,6 +199,7 @@ void run_rules_test(const char* filename) {
     }
 }
 
+// Ignora diretórios de sistema/desenvolvimento
 int should_ignore_dir(const char* path) {
     const char* ignore_dirs[] = {
         ".git", ".github", ".vscode", ".idea", ".settings",
@@ -215,6 +224,7 @@ int should_ignore_dir(const char* path) {
     return 0;
 }
 
+// Filtra extensões suspeitas para escanear
 int should_scan_file(const char* path) {
 
     const char* ext = strrchr(path, '.');
@@ -230,10 +240,10 @@ int should_scan_file(const char* path) {
     lower_ext[j]='\0';
 
     const char* allowed[] = {
-        "exe", "dll", "scr", "msi", "com", "pif",
-        "elf", "bin", "so",
-        "ps1", "bat", "cmd", "vbs", "js",
-        "doc", "docm", "xls", "xlsm", "ppt", "pptm",
+        "exe", "dll", "scr", "msi", "com", "pif", // Windows executaveis
+        "elf", "bin", "so", // Linux executaveis
+        "ps1", "bat", "cmd", "vbs", "js", // Scripts
+        "doc", "docm", "xls", "xlsm", "ppt", "pptm", // Office com macros
         "apk", "jar",
         "pdf", "swf",
         "zip", "rar", "7z",
@@ -252,6 +262,7 @@ int should_scan_file(const char* path) {
     return 0;
 }
 
+// Varredura recursiva em diretórios
 void scan_directory(const char* path) {
     DIR* d = opendir(path);
     if(!d) {
@@ -296,5 +307,3 @@ void scan_directory(const char* path) {
     }
     closedir(d);
 }
-
-
