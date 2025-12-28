@@ -13,7 +13,7 @@
 #define EICAR_SIZE 68
 
 #define RED     "\033[1;31m"
-#define GREEN   "\033[1;32m"
+#define GREEN   "\033[32m"
 #define RESET   "\033[0m"
 
 extern int total_files_scanned;
@@ -40,5 +40,3 @@ int should_scan_file(const char* path);
 void scan_directory(const char* path);
 
 #endif
-
-
